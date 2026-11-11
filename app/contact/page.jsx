@@ -57,9 +57,9 @@ export default function ContactPage() {
                 <Phone className="w-5 h-5" />
               </div>
               <h3 className="text-sm font-black text-yellow-100">{t.contact.phone}</h3>
-              <p className="text-xs text-purple-200 font-semibold" dir="ltr">+90 555 010 20 30</p>
+              <p className="text-xs text-purple-200 font-semibold" dir="ltr">+90 536 251 58 78</p>
               <a
-                href="https://wa.me/905550102030?text=Hello%20Al-Alamiah"
+                href="https://wa.me/905362515878?text=Hello%20Al-Alamiah"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl bg-[#25D366]/20 border border-[#25D366]/50 text-[#25D366] text-xs font-bold hover:bg-[#25D366]/30 transition-all shadow-sm"

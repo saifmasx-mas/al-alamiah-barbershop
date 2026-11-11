@@ -35,13 +35,13 @@ export default function Footer() {
             
             {/* Quick WhatsApp button in footer */}
             <a
-              href="https://wa.me/905550102030?text=Hello%20Al-Alamiah%20Barbershop"
+              href="https://wa.me/905362515878?text=Hello%20Al-Alamiah%20Barbershop"
               target="_blank"
               rel="noopener noreferrer"
               className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-[#25D366]/20 to-[#25D366]/10 border border-[#25D366]/50 text-[#25D366] text-xs font-bold hover:bg-[#25D366]/30 transition-all shadow-[0_0_15px_rgba(37,211,102,0.2)]"
             >
               <MessageSquare className="w-4 h-4" />
-              <span>{t.footer.chatWhatsApp} (+90 555 010 20 30)</span>
+              <span>{t.footer.chatWhatsApp} (+90 536 251 58 78)</span>
             </a>
           </div>
 
@@ -61,7 +61,7 @@ export default function Footer() {
             </div>
             <div className="flex items-start gap-2.5 text-xs text-purple-200 font-medium">
               <Phone className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
-              <span dir="ltr">+90 555 010 20 30</span>
+              <span dir="ltr">+90 536 251 58 78</span>
             </div>
           </div>
 
@@ -78,7 +78,7 @@ export default function Footer() {
               
               {/* WhatsApp */}
               <a
-                href="https://wa.me/905550102030"
+                href="https://wa.me/905362515878"
                 target="_blank"
                 rel="noopener noreferrer"
                 title="WhatsApp / وتساب"
