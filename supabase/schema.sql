@@ -37,7 +37,7 @@ CREATE TABLE public.barbers (
 CREATE TABLE public.appointments (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     customer_name VARCHAR(150) NOT NULL,
-    customer_phone VARCHAR(35) NOT NULL DEFAULT '00905362515878',
+    customer_phone VARCHAR(35) NOT NULL DEFAULT '+905550102030',
     barber_id UUID NOT NULL REFERENCES public.barbers(id) ON DELETE CASCADE,
     service_id UUID NOT NULL REFERENCES public.services(id) ON DELETE RESTRICT,
     appointment_datetime TIMESTAMPTZ NOT NULL,

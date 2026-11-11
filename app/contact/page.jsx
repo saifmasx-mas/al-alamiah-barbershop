@@ -8,7 +8,7 @@ export default function ContactPage() {
   const { lang, t } = useLanguage();
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
-  const [phone, setPhone] = useState('00905362515878');
+  const [phone, setPhone] = useState('');
   const [message, setMessage] = useState('');
   const [submitted, setSubmitted] = useState(false);
 
@@ -57,9 +57,9 @@ export default function ContactPage() {
                 <Phone className="w-5 h-5" />
               </div>
               <h3 className="text-sm font-black text-yellow-100">{t.contact.phone}</h3>
-              <p className="text-xs text-purple-200 font-semibold" dir="ltr">+90 536 251 58 78</p>
+              <p className="text-xs text-purple-200 font-semibold" dir="ltr">+90 555 010 20 30</p>
               <a
-                href="https://wa.me/905362515878?text=Hello%20Al-Alamiah"
+                href="https://wa.me/905550102030?text=Hello%20Al-Alamiah"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl bg-[#25D366]/20 border border-[#25D366]/50 text-[#25D366] text-xs font-bold hover:bg-[#25D366]/30 transition-all shadow-sm"
@@ -136,6 +136,7 @@ export default function ContactPage() {
                       type="tel"
                       required
                       dir="ltr"
+                      placeholder="+90 5XX XXX XX XX"
                       value={phone}
                       onChange={(e) => setPhone(e.target.value)}
                       className="w-full bg-[#200B3E] border border-amber-400/30 rounded-2xl px-4 py-3 text-sm text-yellow-100 placeholder:text-purple-400/60 focus:outline-none focus:border-amber-400 text-left"

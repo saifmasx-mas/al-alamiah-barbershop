@@ -218,7 +218,7 @@ export async function createAppointment(formData) {
           service_id: serviceId,
           appointment_datetime: appointmentDateTime,
           customer_name: customerName,
-          customer_phone: customerPhone || '00905362515878',
+          customer_phone: customerPhone || '+905550102030',
           status: 'confirmed',
         },
       ])

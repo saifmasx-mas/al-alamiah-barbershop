@@ -16,9 +16,9 @@ export default function BookingCalendar({ initialBarbers = [], initialServices =
   const [selectedDate, setSelectedDate] = useState(todayStr);
   const [selectedSlot, setSelectedSlot] = useState(null);
 
-  // Form states - autofill user name if logged in
+  // Form states - empty by default with placeholder
   const [customerName, setCustomerName] = useState(user?.name || '');
-  const [customerPhone, setCustomerPhone] = useState('00905362515878');
+  const [customerPhone, setCustomerPhone] = useState('');
 
   useEffect(() => {
     if (user?.name && !customerName) {
@@ -287,6 +287,7 @@ export default function BookingCalendar({ initialBarbers = [], initialServices =
                 type="tel"
                 required
                 dir="ltr"
+                placeholder={t.customerPhonePlaceholder || '+90 5XX XXX XX XX'}
                 value={customerPhone}
                 onChange={(e) => setCustomerPhone(e.target.value)}
                 className="w-full bg-[#200B3E] border border-amber-400/30 rounded-2xl px-4 py-3.5 text-sm text-yellow-100 placeholder:text-purple-400/60 focus:outline-none focus:border-amber-400 text-left"
