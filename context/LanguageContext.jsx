@@ -9,6 +9,8 @@ const LanguageContext = createContext(null);
 export function LanguageProvider({ children }) {
   const [lang, setLang] = useState('ar');
   const [user, setUser] = useState(null);
+  const [authUser, setAuthUser] = useState(null);
+  const [appRole, setAppRole] = useState(null);
   const [isAuthOpen, setIsAuthOpen] = useState(false);
   const [authMode, setAuthMode] = useState('signin');
 
@@ -22,22 +24,27 @@ export function LanguageProvider({ children }) {
     let active = true;
     const loadBarber = async (authUser) => {
       if (!authUser) {
-        if (active) setUser(null);
+        if (active) {
+          setUser(null);
+          setAuthUser(null);
+          setAppRole(null);
+        }
         return;
       }
 
-      const { data, error } = await supabase
-        .from('barbers')
-        .select('*')
-        .eq('auth_user_id', authUser.id)
-        .maybeSingle();
+      if (active) setAuthUser(authUser);
+      const [{ data: role, error: roleError }, { data, error }] = await Promise.all([
+        supabase.from('user_roles').select('role').eq('user_id', authUser.id).maybeSingle(),
+        supabase.from('barbers').select('*').eq('auth_user_id', authUser.id).maybeSingle(),
+      ]);
 
-      if (error) {
-        console.error('Unable to load barber profile:', error.message);
+      if (roleError || error) {
+        console.error('Unable to load account access:', roleError?.message || error.message);
         return;
       }
 
       if (active) {
+        setAppRole(role?.role || null);
         setUser(data ? { ...data, name: data.name } : null);
       }
     };
@@ -77,6 +84,7 @@ export function LanguageProvider({ children }) {
       return;
     }
     setUser(null);
+    setAppRole(null);
   };
 
   const openAuth = (mode = 'signin') => {
@@ -98,6 +106,8 @@ export function LanguageProvider({ children }) {
         t,
         dir: t.dir,
         user,
+        authUser,
+        appRole,
         loginUser,
         logoutUser,
         isAuthOpen,
@@ -109,7 +119,7 @@ export function LanguageProvider({ children }) {
     >
       <div
         dir={t.dir}
-        className="min-h-screen bg-[#0D041A] text-zinc-100 flex flex-col selection:bg-purple-600/40 selection:text-yellow-200"
+        className="flex min-h-screen flex-col bg-[#111315] text-zinc-100 selection:bg-amber-400 selection:text-zinc-950"
       >
         {children}
       </div>

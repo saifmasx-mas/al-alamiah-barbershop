@@ -2,7 +2,6 @@ import './globals.css';
 import { LanguageProvider } from '@/context/LanguageContext';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
-import Chatbot from '@/components/Chatbot';
 import AuthModal from '@/components/AuthModal';
 
 export const metadata = {
@@ -13,14 +12,13 @@ export const metadata = {
 export default function RootLayout({ children }) {
   return (
     <html lang="ar">
-      <body className="antialiased min-h-screen bg-[#07080A] text-zinc-100 flex flex-col">
+      <body className="min-h-screen bg-[#111315] text-zinc-100 antialiased">
         <LanguageProvider>
           <Header />
-          <div className="flex-1">
+          <div className="flex min-h-[calc(100vh-4rem)] flex-col">
             {children}
+            <Footer />
           </div>
-          <Footer />
-          <Chatbot />
           <AuthModal />
         </LanguageProvider>
       </body>

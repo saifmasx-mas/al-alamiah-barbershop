@@ -1,6 +1,7 @@
 'use server';
 
 import { supabase } from '@/lib/supabase';
+import { createClient } from '@supabase/supabase-js';
 import { revalidatePath } from 'next/cache';
 
 const BOOKING_START_MINUTES = 9 * 60 + 30;
@@ -83,6 +84,44 @@ export async function getBookingInitialData() {
   }
 }
 
+export async function getBarberServices(barberId) {
+  if (!barberId) return { services: [], error: 'missing_barber' };
+
+  if (!isSupabaseConfigured()) {
+    return { services: FALLBACK_SERVICES };
+  }
+
+  const { data: barberServices, error } = await supabase
+    .from('barber_services')
+    .select('is_active, price_override, duration_override_minutes, service:services(id, name, duration_minutes, price)')
+    .eq('barber_id', barberId);
+
+  if (error) {
+    return { services: [], error: error.message };
+  }
+
+  if (barberServices?.length) {
+    return {
+      services: barberServices
+        .filter((entry) => entry.is_active !== false)
+        .filter((entry) => entry.service)
+        .map((entry) => ({
+          ...entry.service,
+          price: entry.price_override ?? entry.service.price,
+          duration_minutes: entry.duration_override_minutes ?? entry.service.duration_minutes,
+        })),
+    };
+  }
+
+  const { data: services, error: serviceError } = await supabase
+    .from('services')
+    .select('*')
+    .order('price', { ascending: true });
+
+  if (serviceError) return { services: [], error: serviceError.message };
+  return { services: services || [] };
+}
+
 /**
  * Computes available time slots for the chosen barber, service, and date.
  */
@@ -108,9 +147,24 @@ export async function getAvailableSlots(barberId, serviceId, selectedDateString)
 
   try {
     const [barberRes, serviceRes] = await Promise.all([
-      supabase.from('barbers').select('*').eq('id', barberId).maybeSingle(),
+      supabase.from('barbers').select('working_hours, buffer_minutes').eq('id', barberId).maybeSingle(),
       supabase.from('services').select('duration_minutes').eq('id', serviceId).maybeSingle(),
     ]);
+    if (barberRes.error) throw barberRes.error;
+    if (serviceRes.error) throw serviceRes.error;
+    const { data: serviceOverride, error: overrideError } = await supabase
+      .from('barber_services')
+      .select('is_active, duration_override_minutes')
+      .eq('barber_id', barberId)
+      .eq('service_id', serviceId)
+      .maybeSingle();
+    if (overrideError) throw overrideError;
+    if (!barberRes.data || !serviceRes.data) {
+      return { slots: [], error: 'The selected barber or service could not be found.' };
+    }
+    if (serviceOverride && !serviceOverride.is_active) {
+      return { slots: [], error: 'This service is not available from the selected barber.' };
+    }
 
     let workingHours = {
       start: '09:30',
@@ -120,12 +174,16 @@ export async function getAvailableSlots(barberId, serviceId, selectedDateString)
       days_off: [0],
     };
     let serviceDuration = 45;
+    const bufferMinutes = barberRes.data?.buffer_minutes ?? 10;
 
     if (barberRes.data?.working_hours) {
       workingHours = barberRes.data.working_hours;
     }
     if (serviceRes.data?.duration_minutes) {
       serviceDuration = serviceRes.data.duration_minutes;
+    }
+    if (serviceOverride?.duration_override_minutes) {
+      serviceDuration = serviceOverride.duration_override_minutes;
     }
 
     if (workingHours.days_off?.includes(dayOfWeek)) {
@@ -136,19 +194,18 @@ export async function getAvailableSlots(barberId, serviceId, selectedDateString)
     const startOfDay = `${selectedDateString}T00:00:00.000Z`;
     const endOfDay = `${selectedDateString}T23:59:59.999Z`;
 
-    const { data: appointments } = await supabase
-      .from('appointments')
-      .select('appointment_datetime, service:services(duration_minutes)')
-      .eq('barber_id', barberId)
-      .neq('status', 'cancelled')
-      .gte('appointment_datetime', startOfDay)
-      .lte('appointment_datetime', endOfDay);
+    const { data: appointments, error: appointmentsError } = await supabase.rpc(
+      'get_barber_busy_windows',
+      { p_barber_id: barberId, p_start: startOfDay, p_end: endOfDay }
+    );
+    if (appointmentsError) throw appointmentsError;
 
     const bookedIntervals = (appointments || []).map((appt) => {
-      const apptDate = new Date(appt.appointment_datetime);
+      const apptDate = new Date(appt.starts_at);
       const startMinutes = apptDate.getHours() * 60 + apptDate.getMinutes();
-      const duration = appt.service?.duration_minutes || 45;
-      return { start: startMinutes, end: startMinutes + duration };
+      const busyUntil = new Date(appt.busy_until);
+      const endMinutes = busyUntil.getHours() * 60 + busyUntil.getMinutes();
+      return { start: startMinutes, end: endMinutes };
     });
 
     const parseToMin = (t) => {
@@ -175,7 +232,11 @@ export async function getAvailableSlots(barberId, serviceId, selectedDateString)
         (b) => time < b.end && slotEnd > b.start
       );
 
-      if (!isBooked) {
+      const overlapsBuffer = bookedIntervals.some(
+        (b) => time < b.end && slotEnd + bufferMinutes > b.start
+      );
+
+      if (!isBooked && !overlapsBuffer) {
         const hh = Math.floor(time / 60).toString().padStart(2, '0');
         const mm = (time % 60).toString().padStart(2, '0');
         availableSlots.push(`${hh}:${mm}`);
@@ -184,19 +245,37 @@ export async function getAvailableSlots(barberId, serviceId, selectedDateString)
 
     return { slots: availableSlots, isDayOff: false };
   } catch (error) {
-    console.warn('Falling back to default demo slots:', error.message);
-    const serviceDuration = FALLBACK_SERVICES.find((service) => service.id === serviceId)?.duration_minutes || 45;
-    return { slots: makeDemoSlots(serviceDuration), isDayOff: false };
+    console.error('Unable to calculate available slots:', error.message);
+    return { slots: [], error: error.message };
   }
 }
 
 /**
  * Creates an appointment with race condition collision handling.
  */
-export async function createAppointment(formData) {
+export async function createAppointment(formData, accessToken) {
   const { barberId, serviceId, date, timeSlot, customerName, customerPhone } = formData;
 
-  if (!barberId || !serviceId || !date || !timeSlot || !customerName) {
+  if (!accessToken) {
+    return { success: false, errorType: 'unauthenticated' };
+  }
+
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  if (!url || !anonKey || !isSupabaseConfigured()) {
+    return { success: false, errorType: 'db_error', message: 'Supabase is not configured.' };
+  }
+
+  const authenticatedSupabase = createClient(url, anonKey, {
+    global: { headers: { Authorization: `Bearer ${accessToken}` } },
+    auth: { persistSession: false, autoRefreshToken: false },
+  });
+  const { data: authData, error: authError } = await authenticatedSupabase.auth.getUser(accessToken);
+  if (authError || !authData.user) {
+    return { success: false, errorType: 'unauthenticated' };
+  }
+
+  if (!barberId || !serviceId || !date || !timeSlot || !customerName || !customerPhone) {
     return { success: false, errorType: 'missing_fields' };
   }
 
@@ -214,8 +293,8 @@ export async function createAppointment(formData) {
   }
 
   let serviceDuration;
-  if (isSupabaseConfigured()) {
-    const { data: service, error } = await supabase
+  {
+    const { data: service, error } = await authenticatedSupabase
       .from('services')
       .select('duration_minutes')
       .eq('id', serviceId)
@@ -228,8 +307,21 @@ export async function createAppointment(formData) {
       return { success: false, errorType: 'invalid_fields' };
     }
     serviceDuration = service.duration_minutes;
-  } else {
-    serviceDuration = FALLBACK_SERVICES.find((service) => service.id === serviceId)?.duration_minutes;
+    const { data: override, error: overrideError } = await authenticatedSupabase
+      .from('barber_services')
+      .select('is_active, duration_override_minutes')
+      .eq('barber_id', barberId)
+      .eq('service_id', serviceId)
+      .maybeSingle();
+    if (overrideError) {
+      return { success: false, errorType: 'db_error', message: overrideError.message };
+    }
+    if (override && !override.is_active) {
+      return { success: false, errorType: 'invalid_fields' };
+    }
+    if (override?.duration_override_minutes) {
+      serviceDuration = override.duration_override_minutes;
+    }
   }
 
   if (!serviceDuration) {
@@ -242,30 +334,17 @@ export async function createAppointment(formData) {
 
   const appointmentDateTime = new Date(`${date}T${timeSlot}:00`).toISOString();
 
-  if (!isSupabaseConfigured()) {
-    // Return instant simulated confirmation
-    return {
-      success: true,
-      appointment: {
-        id: 'mock-' + Date.now(),
-        customer_name: customerName,
-        customer_phone: customerPhone,
-        appointment_datetime: appointmentDateTime,
-        status: 'confirmed',
-      },
-    };
-  }
-
   try {
-    const { data, error } = await supabase
+    const { data, error } = await authenticatedSupabase
       .from('appointments')
       .insert([
         {
           barber_id: barberId,
           service_id: serviceId,
           appointment_datetime: appointmentDateTime,
+          customer_id: authData.user.id,
           customer_name: customerName,
-          customer_phone: customerPhone || '+905550102030',
+          customer_phone: customerPhone,
           status: 'confirmed',
         },
       ])
@@ -273,7 +352,7 @@ export async function createAppointment(formData) {
       .single();
 
     if (error) {
-      if (error.code === '23505' || error.message.includes('unique')) {
+      if (error.code === '23505' || error.code === '23P01' || error.message.includes('unique')) {
         return { success: false, errorType: 'double_booking' };
       }
       return { success: false, errorType: 'db_error', message: error.message };
@@ -282,15 +361,7 @@ export async function createAppointment(formData) {
     revalidatePath('/');
     return { success: true, appointment: data };
   } catch (err) {
-    // If database connection fails, still return confirmation for demo
-    return {
-      success: true,
-      appointment: {
-        id: 'demo-' + Date.now(),
-        customer_name: customerName,
-        appointment_datetime: appointmentDateTime,
-        status: 'confirmed',
-      },
-    };
+    console.error('Appointment creation failed:', err.message);
+    return { success: false, errorType: 'db_error', message: err.message };
   }
 }
