@@ -3,10 +3,10 @@
 import React, { useState, useEffect, useTransition } from 'react';
 import { getAvailableSlots, createAppointment } from '@/app/actions/booking';
 import { useLanguage } from '@/context/LanguageContext';
-import { Sparkles, Crown, Clock, Calendar as CalendarIcon } from 'lucide-react';
+import { Sparkles, Crown, Clock, Calendar as CalendarIcon, MapPin, Phone } from 'lucide-react';
 
 export default function BookingCalendar({ initialBarbers = [], initialServices = [] }) {
-  const { lang, t, user } = useLanguage();
+  const { lang, t } = useLanguage();
 
   // Selection states
   const [selectedBarber, setSelectedBarber] = useState(initialBarbers[0]?.id || '');
@@ -17,14 +17,8 @@ export default function BookingCalendar({ initialBarbers = [], initialServices =
   const [selectedSlot, setSelectedSlot] = useState(null);
 
   // Form states - empty by default with placeholder
-  const [customerName, setCustomerName] = useState(user?.name || '');
+  const [customerName, setCustomerName] = useState('');
   const [customerPhone, setCustomerPhone] = useState('');
-
-  useEffect(() => {
-    if (user?.name && !customerName) {
-      setCustomerName(user.name);
-    }
-  }, [user]);
 
   // Slots & Loading
   const [slots, setSlots] = useState([]);
@@ -77,6 +71,8 @@ export default function BookingCalendar({ initialBarbers = [], initialServices =
     if (!res.success) {
       if (res.errorType === 'double_booking') {
         setFeedback({ type: 'error', text: t.doubleBookingError });
+      } else if (res.errorType === 'invalid_time') {
+        setFeedback({ type: 'error', text: t.auth.invalidTime });
       } else {
         setFeedback({ type: 'error', text: res.message || t.systemError });
       }
@@ -94,6 +90,8 @@ export default function BookingCalendar({ initialBarbers = [], initialServices =
 
   const activeServiceObj = initialServices.find((s) => s.id === selectedService);
   const serviceLocalized = activeServiceObj ? (t.services[activeServiceObj.name] || { name: activeServiceObj.name, desc: '' }) : null;
+  const activeBarber = initialBarbers.find((barber) => barber.id === selectedBarber);
+  const mapUrl = /^https?:\/\//i.test(activeBarber?.map_url || '') ? activeBarber.map_url : null;
 
   return (
     <div
@@ -143,6 +141,7 @@ export default function BookingCalendar({ initialBarbers = [], initialServices =
             </div>
           )}
         </div>
+        <p className="text-xs text-amber-200/80 font-semibold">{t.bookingHours}</p>
 
         {/* Controls: Service & Barber Selector */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
@@ -193,6 +192,27 @@ export default function BookingCalendar({ initialBarbers = [], initialServices =
                 })}
               </select>
             </div>
+            {(activeBarber?.phone || activeBarber?.address || mapUrl) && (
+              <div className="space-y-1 px-1 text-xs text-purple-200/80">
+                {activeBarber.address && (
+                  <p className="flex items-start gap-1.5">
+                    <MapPin className="w-3.5 h-3.5 mt-0.5 shrink-0 text-amber-400" />
+                    <span>{activeBarber.address}</span>
+                  </p>
+                )}
+                {activeBarber.phone && (
+                  <a href={`tel:${activeBarber.phone}`} className="flex items-center gap-1.5 hover:text-amber-300">
+                    <Phone className="w-3.5 h-3.5 text-amber-400" />
+                    <span dir="ltr">{activeBarber.phone}</span>
+                  </a>
+                )}
+                {mapUrl && (
+                  <a href={mapUrl} target="_blank" rel="noopener noreferrer" className="inline-flex text-amber-300 hover:underline">
+                    {t.auth.mapLocation}
+                  </a>
+                )}
+              </div>
+            )}
           </div>
         </div>
 

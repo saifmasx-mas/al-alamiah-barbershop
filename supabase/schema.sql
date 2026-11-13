@@ -23,9 +23,13 @@ CREATE TABLE public.services (
 CREATE TABLE public.barbers (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     name VARCHAR(150) NOT NULL,
+    auth_user_id UUID UNIQUE REFERENCES auth.users(id) ON DELETE CASCADE,
+    phone VARCHAR(35),
+    address TEXT,
+    map_url TEXT,
     working_hours JSONB NOT NULL DEFAULT '{
-        "start": "09:00",
-        "end": "20:00",
+        "start": "09:30",
+        "end": "22:00",
         "lunch_start": "13:30",
         "lunch_end": "14:30",
         "days_off": [0]
@@ -66,6 +70,15 @@ ON public.services FOR SELECT USING (true);
 CREATE POLICY "Allow public read access to barbers" 
 ON public.barbers FOR SELECT USING (true);
 
+CREATE POLICY "Barbers can create their own profile"
+ON public.barbers FOR INSERT TO authenticated
+WITH CHECK (auth.uid() = auth_user_id);
+
+CREATE POLICY "Barbers can update their own profile"
+ON public.barbers FOR UPDATE TO authenticated
+USING (auth.uid() = auth_user_id)
+WITH CHECK (auth.uid() = auth_user_id);
+
 CREATE POLICY "Allow public read access to active appointments" 
 ON public.appointments FOR SELECT USING (true);
 
@@ -81,15 +94,15 @@ INSERT INTO public.services (name, duration_minutes, price) VALUES
 
 INSERT INTO public.barbers (name, working_hours) VALUES
 ('Marcus "Blade" Vance', '{
-    "start": "09:00",
-    "end": "19:00",
+    "start": "09:30",
+    "end": "22:00",
     "lunch_start": "13:00",
     "lunch_end": "14:00",
     "days_off": [0]
 }'::jsonb),
 ('Julian Sterling', '{
-    "start": "11:00",
-    "end": "21:00",
+    "start": "09:30",
+    "end": "22:00",
     "lunch_start": "15:00",
     "lunch_end": "16:00",
     "days_off": [1]

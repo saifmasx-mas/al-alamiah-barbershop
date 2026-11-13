@@ -2,6 +2,7 @@
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { translations } from '@/lib/translations';
+import { supabase } from '@/lib/supabase';
 
 const LanguageContext = createContext(null);
 
@@ -12,16 +13,51 @@ export function LanguageProvider({ children }) {
   const [authMode, setAuthMode] = useState('signin');
 
   useEffect(() => {
+    localStorage.removeItem('al_alamiah_user');
     const saved = localStorage.getItem('al_alamiah_lang');
     if (saved && (saved === 'ar' || saved === 'tr' || saved === 'en')) {
       setLang(saved);
     }
-    const savedUser = localStorage.getItem('al_alamiah_user');
-    if (savedUser) {
-      try {
-        setUser(JSON.parse(savedUser));
-      } catch (e) {}
-    }
+
+    let active = true;
+    const loadBarber = async (authUser) => {
+      if (!authUser) {
+        if (active) setUser(null);
+        return;
+      }
+
+      const { data, error } = await supabase
+        .from('barbers')
+        .select('*')
+        .eq('auth_user_id', authUser.id)
+        .maybeSingle();
+
+      if (error) {
+        console.error('Unable to load barber profile:', error.message);
+        return;
+      }
+
+      if (active) {
+        setUser(data ? { ...data, name: data.name } : null);
+      }
+    };
+
+    supabase.auth.getSession().then(({ data, error }) => {
+      if (error) {
+        console.error('Unable to restore authentication session:', error.message);
+        return;
+      }
+      loadBarber(data.session?.user);
+    });
+
+    const { data: authListener } = supabase.auth.onAuthStateChange((_event, session) => {
+      loadBarber(session?.user);
+    });
+
+    return () => {
+      active = false;
+      authListener.subscription.unsubscribe();
+    };
   }, []);
 
   const changeLang = (newLang) => {
@@ -31,13 +67,16 @@ export function LanguageProvider({ children }) {
 
   const loginUser = (userData) => {
     setUser(userData);
-    localStorage.setItem('al_alamiah_user', JSON.stringify(userData));
     setIsAuthOpen(false);
   };
 
-  const logoutUser = () => {
+  const logoutUser = async () => {
+    const { error } = await supabase.auth.signOut();
+    if (error) {
+      console.error('Unable to sign out:', error.message);
+      return;
+    }
     setUser(null);
-    localStorage.removeItem('al_alamiah_user');
   };
 
   const openAuth = (mode = 'signin') => {

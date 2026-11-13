@@ -3,13 +3,16 @@
 import { supabase } from '@/lib/supabase';
 import { revalidatePath } from 'next/cache';
 
+const BOOKING_START_MINUTES = 9 * 60 + 30;
+const BOOKING_END_MINUTES = 22 * 60;
+
 const FALLBACK_BARBERS = [
   {
     id: '11111111-1111-1111-1111-111111111111',
     name: 'Marcus "Blade" Vance',
     working_hours: {
-      start: '09:00',
-      end: '19:00',
+      start: '09:30',
+      end: '22:00',
       lunch_start: '13:00',
       lunch_end: '14:00',
       days_off: [0],
@@ -19,8 +22,8 @@ const FALLBACK_BARBERS = [
     id: '22222222-2222-2222-2222-222222222222',
     name: 'Julian Sterling',
     working_hours: {
-      start: '10:00',
-      end: '20:00',
+      start: '09:30',
+      end: '22:00',
       lunch_start: '14:00',
       lunch_end: '15:00',
       days_off: [1],
@@ -38,6 +41,16 @@ const FALLBACK_SERVICES = [
 function isSupabaseConfigured() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   return url && !url.includes('your-project') && !url.includes('example');
+}
+
+function makeDemoSlots(duration) {
+  const slots = [];
+  for (let time = BOOKING_START_MINUTES; time + duration <= BOOKING_END_MINUTES; time += 30) {
+    const hours = Math.floor(time / 60).toString().padStart(2, '0');
+    const minutes = (time % 60).toString().padStart(2, '0');
+    slots.push(`${hours}:${minutes}`);
+  }
+  return slots;
 }
 
 /**
@@ -89,11 +102,8 @@ export async function getAvailableSlots(barberId, serviceId, selectedDateString)
       return { slots: [], isDayOff: true };
     }
 
-    const demoSlots = [
-      '09:30', '10:00', '10:30', '11:00', '11:30', '12:00',
-      '14:30', '15:00', '15:30', '16:00', '16:30', '17:00', '17:30', '18:00'
-    ];
-    return { slots: demoSlots, isDayOff: false };
+    const serviceDuration = FALLBACK_SERVICES.find((service) => service.id === serviceId)?.duration_minutes || 45;
+    return { slots: makeDemoSlots(serviceDuration), isDayOff: false };
   }
 
   try {
@@ -103,8 +113,8 @@ export async function getAvailableSlots(barberId, serviceId, selectedDateString)
     ]);
 
     let workingHours = {
-      start: '09:00',
-      end: '19:00',
+      start: '09:30',
+      end: '22:00',
       lunch_start: '13:00',
       lunch_end: '14:00',
       days_off: [0],
@@ -146,8 +156,8 @@ export async function getAvailableSlots(barberId, serviceId, selectedDateString)
       return h * 60 + m;
     };
 
-    const workStart = parseToMin(workingHours.start);
-    const workEnd = parseToMin(workingHours.end);
+    const workStart = Math.max(BOOKING_START_MINUTES, parseToMin(workingHours.start));
+    const workEnd = Math.min(BOOKING_END_MINUTES, parseToMin(workingHours.end));
     const lunchStart = workingHours.lunch_start ? parseToMin(workingHours.lunch_start) : null;
     const lunchEnd = workingHours.lunch_end ? parseToMin(workingHours.lunch_end) : null;
 
@@ -175,11 +185,8 @@ export async function getAvailableSlots(barberId, serviceId, selectedDateString)
     return { slots: availableSlots, isDayOff: false };
   } catch (error) {
     console.warn('Falling back to default demo slots:', error.message);
-    const demoSlots = [
-      '09:30', '10:00', '10:30', '11:00', '11:30',
-      '14:30', '15:00', '15:30', '16:00', '16:30', '17:00'
-    ];
-    return { slots: demoSlots, isDayOff: false };
+    const serviceDuration = FALLBACK_SERVICES.find((service) => service.id === serviceId)?.duration_minutes || 45;
+    return { slots: makeDemoSlots(serviceDuration), isDayOff: false };
   }
 }
 
@@ -191,6 +198,46 @@ export async function createAppointment(formData) {
 
   if (!barberId || !serviceId || !date || !timeSlot || !customerName) {
     return { success: false, errorType: 'missing_fields' };
+  }
+
+  const match = /^([01]\d|2[0-3]):([0-5]\d)$/.exec(timeSlot);
+  if (!match) {
+    return { success: false, errorType: 'invalid_time' };
+  }
+
+  const startMinutes = Number(match[1]) * 60 + Number(match[2]);
+  if (
+    startMinutes < BOOKING_START_MINUTES ||
+    (startMinutes - BOOKING_START_MINUTES) % 30 !== 0
+  ) {
+    return { success: false, errorType: 'invalid_time' };
+  }
+
+  let serviceDuration;
+  if (isSupabaseConfigured()) {
+    const { data: service, error } = await supabase
+      .from('services')
+      .select('duration_minutes')
+      .eq('id', serviceId)
+      .maybeSingle();
+
+    if (error) {
+      return { success: false, errorType: 'db_error', message: error.message };
+    }
+    if (!service) {
+      return { success: false, errorType: 'invalid_fields' };
+    }
+    serviceDuration = service.duration_minutes;
+  } else {
+    serviceDuration = FALLBACK_SERVICES.find((service) => service.id === serviceId)?.duration_minutes;
+  }
+
+  if (!serviceDuration) {
+    return { success: false, errorType: 'invalid_fields' };
+  }
+
+  if (startMinutes + serviceDuration > BOOKING_END_MINUTES) {
+    return { success: false, errorType: 'invalid_time' };
   }
 
   const appointmentDateTime = new Date(`${date}T${timeSlot}:00`).toISOString();
