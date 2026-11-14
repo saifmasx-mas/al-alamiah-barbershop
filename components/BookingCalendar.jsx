@@ -304,8 +304,8 @@ export default function BookingCalendar({ initialBarbers = [], initialServices =
                       onClick={() => setSelectedSlot(slot)}
                       className={`py-2.5 px-2 rounded-xl text-sm font-extrabold transition-all duration-200 border ${
                         isSelected
-                          ? 'border-white/30 bg-white/10 text-white'
-                          : 'border-white/10 bg-white/[0.03] text-zinc-300 hover:border-white/25 hover:bg-white/[0.06]'
+                          ? 'border-[#D9FFD1] bg-[#39FF14] text-[#100030] ring-2 ring-[#39FF14]/40 shadow-[0_0_18px_rgba(57,255,20,0.55)]'
+                          : 'border-[#39FF14]/60 bg-[#39FF14] text-[#100030] shadow-[0_0_10px_rgba(57,255,20,0.3)] hover:border-[#D9FFD1] hover:bg-[#70FF57]'
                       }`}
                     >
                       {slot}
