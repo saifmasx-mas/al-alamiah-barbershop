@@ -53,7 +53,7 @@ export default function AuthModal() {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 backdrop-blur-md">
-      <section className="relative w-full max-w-md rounded-3xl border border-white/10 bg-[#151719]/95 p-6 shadow-2xl shadow-black/40 backdrop-blur-xl sm:p-8">
+      <section className="relative w-full max-w-md rounded-3xl border border-white/10 bg-[#200040]/95 p-6 shadow-2xl shadow-black/40 backdrop-blur-xl sm:p-8">
         <button
           type="button"
           onClick={closeAuth}

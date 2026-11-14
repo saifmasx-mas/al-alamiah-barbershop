@@ -188,12 +188,12 @@ export default function BookingCalendar({ initialBarbers = [], initialServices =
                 value={selectedService}
                 onChange={(e) => setSelectedService(e.target.value)}
                 disabled={!services.length}
-                className="min-h-12 w-full appearance-none rounded-xl border border-white/10 bg-[#191b1e] px-4 py-3.5 text-sm text-zinc-100 outline-none transition focus:border-white/25"
+                className="min-h-12 w-full appearance-none rounded-xl border border-white/10 bg-[#200040] px-4 py-3.5 text-sm text-zinc-100 outline-none transition focus:border-white/25"
               >
                 {services.map((service) => {
                   const loc = t.services[service.name] || { name: service.name };
                   return (
-                    <option key={service.id} value={service.id} className="bg-[#191b1e] text-zinc-100">
+                    <option key={service.id} value={service.id} className="bg-[#200040] text-zinc-100">
                       {loc.name} ({t.currency} {service.price} • {service.duration_minutes} {t.durationMinutes})
                     </option>
                   );
@@ -214,12 +214,12 @@ export default function BookingCalendar({ initialBarbers = [], initialServices =
               <select
                 value={selectedBarber}
                 onChange={(e) => setSelectedBarber(e.target.value)}
-                className="min-h-12 w-full appearance-none rounded-xl border border-white/10 bg-[#191b1e] px-4 py-3.5 text-sm text-zinc-100 outline-none transition focus:border-white/25"
+                className="min-h-12 w-full appearance-none rounded-xl border border-white/10 bg-[#200040] px-4 py-3.5 text-sm text-zinc-100 outline-none transition focus:border-white/25"
               >
                 {initialBarbers.map((barber) => {
                   const locName = t.barbers[barber.name] || barber.name;
                   return (
-                    <option key={barber.id} value={barber.id} className="bg-[#191b1e] text-zinc-100">
+                    <option key={barber.id} value={barber.id} className="bg-[#200040] text-zinc-100">
                       {locName}
                     </option>
                   );
@@ -263,7 +263,7 @@ export default function BookingCalendar({ initialBarbers = [], initialServices =
               min={todayStr}
               value={selectedDate}
               onChange={(e) => setSelectedDate(e.target.value)}
-              className="min-h-12 w-full rounded-xl border border-white/10 bg-[#191b1e] px-4 py-3.5 text-sm text-zinc-100 outline-none transition focus:border-white/25"
+              className="min-h-12 w-full rounded-xl border border-white/10 bg-[#200040] px-4 py-3.5 text-sm text-zinc-100 outline-none transition focus:border-white/25"
             />
           </div>
 

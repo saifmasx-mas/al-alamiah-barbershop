@@ -12,7 +12,7 @@ export const metadata = {
 export default function RootLayout({ children }) {
   return (
     <html lang="ar">
-      <body className="min-h-screen bg-[#111315] text-zinc-100 antialiased">
+      <body className="min-h-screen bg-[#100030] text-zinc-100 antialiased">
         <LanguageProvider>
           <Header />
           <div className="flex min-h-[calc(100vh-4rem)] flex-col">

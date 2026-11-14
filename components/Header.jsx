@@ -8,7 +8,7 @@ export default function Header() {
   const { lang, setLang, t, user, authUser, appRole, logoutUser, openAuth } = useLanguage();
 
   return (
-    <header className="sticky top-0 z-40 border-b border-white/10 bg-[#111315]/85 backdrop-blur-xl">
+    <header className="sticky top-0 z-40 border-b border-white/10 bg-[#100030]/85 backdrop-blur-xl">
       <div className="mx-auto flex h-16 max-w-6xl items-center justify-between gap-3 px-4 sm:px-6">
         <Link href="/" className="flex min-h-11 items-center gap-2.5 text-zinc-100">
           <span className="flex h-9 w-9 items-center justify-center rounded-xl border border-white/10 bg-white/5 text-amber-400">
@@ -27,9 +27,9 @@ export default function Header() {
             onChange={(event) => setLang(event.target.value)}
             className="min-h-11 rounded-xl border border-white/10 bg-white/5 px-2 text-xs text-zinc-200 outline-none focus:border-white/25"
           >
-            <option value="ar" className="bg-[#111315]">عربي</option>
-            <option value="tr" className="bg-[#111315]">TR</option>
-            <option value="en" className="bg-[#111315]">EN</option>
+            <option value="ar" className="bg-[#100030]">عربي</option>
+            <option value="tr" className="bg-[#100030]">TR</option>
+            <option value="en" className="bg-[#100030]">EN</option>
           </select>
 
           {appRole === 'admin' ? (

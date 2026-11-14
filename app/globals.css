@@ -4,8 +4,9 @@
 
 :root {
   color-scheme: dark;
-  --background: #111315;
-  --foreground: #f4f4f5;
+  --background: #100030;
+  --foreground: #f0c0c0;
+  accent-color: #f0c040;
 }
 
 html {
@@ -27,8 +28,8 @@ select {
 }
 
 ::selection {
-  color: #18181b;
-  background: #fbbf24;
+  color: #100030;
+  background: #f0c040;
 }
 
 ::-webkit-scrollbar {
@@ -37,10 +38,10 @@ select {
 }
 
 ::-webkit-scrollbar-track {
-  background: #111315;
+  background: #100030;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #3f3f46;
+  background: #500080;
   border-radius: 9999px;
 }
